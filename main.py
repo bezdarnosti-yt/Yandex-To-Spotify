@@ -1,10 +1,11 @@
 from PyQt6.QtCore import QSize
-from PyQt6.QtWidgets import QMainWindow, QPushButton, QLineEdit, QVBoxLayout, QWidget, QApplication, QFrame
+from PyQt6.QtWidgets import QMainWindow, QPushButton, QLineEdit, QVBoxLayout, QWidget, QApplication, QFrame, QDialog, QLabel
+from pathlib import Path
+from yandex_music import Client
+from yandex_music.exceptions import UnauthorizedError
 
 import json
 import webbrowser
-
-from pathlib import Path
 
 
 class MainWindow(QMainWindow):
@@ -83,6 +84,27 @@ class MainWindow(QMainWindow):
         
         with open("env.json", "w") as f:
             json.dump(data, f, indent=4)
+            
+        try:
+            client = Client(self.textYaApi.text()).init()
+        except UnauthorizedError:
+            dlg = QDialog(self)
+            dlg.setWindowTitle("Проверка Яндекс")
+            layout = QVBoxLayout()
+            message = QLabel("Токен невалидный!")
+            layout.addWidget(message)
+            dlg.setLayout(layout)
+            dlg.exec()
+            return
+        
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Проверка Яндекс")
+        layout = QVBoxLayout()
+        message = QLabel("Токен правильный!")
+        layout.addWidget(message)
+        dlg.setLayout(layout)
+        dlg.exec()
+        
     
     def checkSpotifyApi(self):
         with open("env.json", "r+") as f:
