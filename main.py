@@ -3,6 +3,8 @@ from PyQt6.QtWidgets import QMainWindow, QPushButton, QLineEdit, QVBoxLayout, QW
 
 import json
 
+from pathlib import Path
+
 
 class MainWindow(QMainWindow):
     WIDTH = 320
@@ -10,11 +12,16 @@ class MainWindow(QMainWindow):
     
     isYaApiWorking = False
     isSpotifyApiWorking = False
-    isFirstLaunch = True
+    
+    file_path = Path("env.json")
+    
+    env = {
+        "ya_secret" : "",
+        "spotify_secret" : ""
+    }
+    empty_data = {}
     
     def __init__(self):
-        self.checkConfigFile()
-        
         super().__init__()
         
         self.setWindowTitle("YaConversion")
@@ -23,17 +30,17 @@ class MainWindow(QMainWindow):
         
         layout = QVBoxLayout()
         
-        textYaApi = QLineEdit()
-        textYaApi.setPlaceholderText("Введите токен от вашего аккаунта Яндекс.Музыка")
-        layout.addWidget(textYaApi)
+        self.textYaApi = QLineEdit()
+        self.textYaApi.setPlaceholderText("Введите токен от вашего аккаунта Яндекс.Музыка")
+        layout.addWidget(self.textYaApi)
         
         checkYaApiButton = QPushButton("Проверить доступ к Яндекс.API")
         checkYaApiButton.clicked.connect(self.checkYaApi)
         layout.addWidget(checkYaApiButton)
         
-        textSpotifyApi = QLineEdit()
-        textSpotifyApi.setPlaceholderText("Введите api ключ от Spotify")
-        layout.addWidget(textSpotifyApi)
+        self.textSpotifyApi = QLineEdit()
+        self.textSpotifyApi.setPlaceholderText("Введите api ключ от Spotify")
+        layout.addWidget(self.textSpotifyApi)
         
         checkSpotifyApiButton = QPushButton("Проверить доступ к Spotify.API")
         checkSpotifyApiButton.clicked.connect(self.checkSpotifyApi)
@@ -54,19 +61,44 @@ class MainWindow(QMainWindow):
         
         self.setCentralWidget(widget)
         
+        self.checkConfigFile()
+        
     def checkYaApi(self):
-        pass
+        with open("env.json", "r+") as f:
+            data = json.load(f)
+        
+        data['ya_secret'] = self.textYaApi.text()
+        
+        with open("env.json", "w") as f:
+            json.dump(data, f, indent=4)
     
     def checkSpotifyApi(self):
-        pass
+        with open("env.json", "r+") as f:
+            data = json.load(f)
+        
+        data['spotify_secret'] = self.textSpotifyApi.text()
+        
+        with open("env.json", "w") as f:
+            json.dump(data, f, indent=4)
     
     def startConversion(self):
         pass
     
     def checkConfigFile(self):
-        pass
-
-
+        # Проверка файла на существовании и в случае чего его создание по шаблону
+        if not self.file_path.is_file():
+            try:
+                with open("env.json", "w") as json_file:
+                    json.dump(self.env, json_file, indent=4)
+            except IOError as e:
+                print(f"Error creating file: {e}")
+        else:
+            with open("env.json", "r") as f:
+                data = json.load(f)
+                self.textYaApi.setText(data["ya_secret"])
+                self.textSpotifyApi.setText(data["spotify_secret"])
+        
+        
 def main():
     app = QApplication([])
     window = MainWindow()
