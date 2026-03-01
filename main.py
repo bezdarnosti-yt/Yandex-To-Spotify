@@ -2,13 +2,14 @@ from PyQt6.QtCore import QSize
 from PyQt6.QtWidgets import QMainWindow, QPushButton, QLineEdit, QVBoxLayout, QWidget, QApplication, QFrame
 
 import json
+import webbrowser
 
 from pathlib import Path
 
 
 class MainWindow(QMainWindow):
     WIDTH = 320
-    HEIGHT = 200
+    HEIGHT = 300
     
     isYaApiWorking = False
     isSpotifyApiWorking = False
@@ -30,6 +31,7 @@ class MainWindow(QMainWindow):
         
         layout = QVBoxLayout()
         
+        # Яндекс - секция
         self.textYaApi = QLineEdit()
         self.textYaApi.setPlaceholderText("Введите токен от вашего аккаунта Яндекс.Музыка")
         layout.addWidget(self.textYaApi)
@@ -38,6 +40,11 @@ class MainWindow(QMainWindow):
         checkYaApiButton.clicked.connect(self.checkYaApi)
         layout.addWidget(checkYaApiButton)
         
+        infoYaApiButton = QPushButton("Как получить токен Яндекс?")
+        infoYaApiButton.clicked.connect(self.getInfoYaApi)
+        layout.addWidget(infoYaApiButton)
+        
+        # Спотифай - секция
         self.textSpotifyApi = QLineEdit()
         self.textSpotifyApi.setPlaceholderText("Введите api ключ от Spotify")
         layout.addWidget(self.textSpotifyApi)
@@ -46,12 +53,17 @@ class MainWindow(QMainWindow):
         checkSpotifyApiButton.clicked.connect(self.checkSpotifyApi)
         layout.addWidget(checkSpotifyApiButton)
         
+        infoSpotifyApiButton = QPushButton("Как получить API ключ Spotify?")
+        infoSpotifyApiButton.clicked.connect(self.getInfoSpotifyApi)
+        layout.addWidget(infoSpotifyApiButton)
+        
         # Разделительная линия
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
         line.setFrameShadow(QFrame.Shadow.Sunken)
         layout.addWidget(line)
         
+        # Конвертация
         startConversionButton = QPushButton("Начало конвертации")
         startConversionButton.clicked.connect(self.startConversion)
         layout.addWidget(startConversionButton)
@@ -97,6 +109,12 @@ class MainWindow(QMainWindow):
                 data = json.load(f)
                 self.textYaApi.setText(data["ya_secret"])
                 self.textSpotifyApi.setText(data["spotify_secret"])
+                
+    def getInfoYaApi(self):
+        webbrowser.open("https://github.com/bezdarnosti-yt/Yandex-To-Spotify/blob/master/YANDEX.md")
+    
+    def getInfoSpotifyApi(self):
+        webbrowser.open("https://github.com/bezdarnosti-yt/Yandex-To-Spotify/blob/master/SPOTIFY.md")
         
         
 def main():
