@@ -1,5 +1,5 @@
 from PyQt6.QtCore import QSize
-from PyQt6.QtWidgets import QMainWindow, QPushButton, QLineEdit, QVBoxLayout, QWidget, QApplication, QFrame, QDialog, QLabel, QTextEdit, QProgressBar
+from PyQt6.QtWidgets import QMainWindow, QPushButton, QLineEdit, QVBoxLayout, QWidget, QApplication, QFrame, QDialog, QLabel, QTextEdit, QProgressBar, QHBoxLayout
 from pathlib import Path
 from yandex_music import Client
 from yandex_music.exceptions import UnauthorizedError
@@ -65,12 +65,28 @@ class MainWindow(QMainWindow):
         layout.addWidget(line)
         
         # Конвертация
-        startConversionButton = QPushButton("Начало конвертации")
-        startConversionButton.clicked.connect(self.startConversion)
-        layout.addWidget(startConversionButton)
+        self.startConversionButton = QPushButton("Начало конвертации")
+        self.startConversionButton.clicked.connect(self.startConversion)
+        self.startConversionButton.setEnabled(self.isApiGood())
+        layout.addWidget(self.startConversionButton)
         
+        # Статус API
+        api_layout = QHBoxLayout()
+        
+        self.ya_api_work_status_label = QLabel("Яндекс API не проверено")
+        api_layout.addWidget(self.ya_api_work_status_label)
+        
+        self.spotify_api_work_status_label = QLabel("Spotify API не проверено")
+        api_layout.addWidget(self.spotify_api_work_status_label)
+        
+        # Обьединение двух QVBoxLayout, QHBoxLayout
+        main_layout = QVBoxLayout()
+        main_layout.addLayout(layout)
+        main_layout.addLayout(api_layout)
+        
+        # Создание разметки
         widget = QWidget()
-        widget.setLayout(layout)
+        widget.setLayout(main_layout)
         
         self.setCentralWidget(widget)
         
@@ -97,6 +113,10 @@ class MainWindow(QMainWindow):
             dlg.exec()
             return
         
+        self.isYaApiWorking = True
+        self.startConversionButton.setEnabled(self.isApiGood())
+        self.ya_api_work_status_label.setText("Яндекс API готово")
+        
         dlg = QDialog(self)
         dlg.setWindowTitle("Проверка Яндекс")
         layout = QVBoxLayout()
@@ -113,6 +133,10 @@ class MainWindow(QMainWindow):
         
         with open("env.json", "w") as f:
             json.dump(data, f, indent=4)
+            
+        self.isSpotifyApiWorking = True
+        self.startConversionButton.setEnabled(self.isApiGood())
+        self.spotify_api_work_status_label.setText("Spotify API готово")
     
     def startConversion(self):
         self.isGettingTracks = True
@@ -188,6 +212,9 @@ class MainWindow(QMainWindow):
     
     def tryExport(self):
         pass
+    
+    def isApiGood(self) -> bool:
+        return self.isYaApiWorking and self.isSpotifyApiWorking
         
 def main():
     app = QApplication([])
