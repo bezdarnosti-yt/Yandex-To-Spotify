@@ -3,6 +3,7 @@ from PyQt6.QtWidgets import QMainWindow, QPushButton, QLineEdit, QVBoxLayout, QW
 from pathlib import Path
 from yandex_music import Client
 from yandex_music.exceptions import UnauthorizedError
+from spotapi import *
 
 import json
 import webbrowser
@@ -10,7 +11,7 @@ import webbrowser
 
 class MainWindow(QMainWindow):
     WIDTH = 320
-    HEIGHT = 260
+    HEIGHT = 330
     
     is_ya_api_working = False
     is_spotify_api_working = False
@@ -20,7 +21,8 @@ class MainWindow(QMainWindow):
     env = {
         "ya_secret" : "",
         "spotify_username" : "",
-        "spotify_password" : ""
+        "spotify_dc" : "",
+        "spotify_key" : ""
     }
     empty_data = {}
     
@@ -39,35 +41,45 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.text_ya_api)
         
         check_ya_api_btn = QPushButton("Проверить доступ к Яндекс.API")
-        check_ya_api_btn.clicked.connect(self.checkYaApi)
+        check_ya_api_btn.clicked.connect(self.check_ya_api)
         layout.addWidget(check_ya_api_btn)
         
         info_ya_api_btn = QPushButton("Как получить токен Яндекс?")
         info_ya_api_btn.clicked.connect(self.get_info_ya_api)
         layout.addWidget(info_ya_api_btn)
         
+        # Разделительная линия
+        line1 = QFrame()
+        line1.setFrameShape(QFrame.Shape.HLine)
+        line1.setFrameShadow(QFrame.Shadow.Sunken)
+        layout.addWidget(line1)
+        
         # Спотифай - секция
         self.text_spotify_login = QLineEdit()
-        self.text_spotify_login.setPlaceholderText("Введите логин от Spotify")
+        self.text_spotify_login.setPlaceholderText("Введите e-mail от Spotify")
         layout.addWidget(self.text_spotify_login)
         
-        self.text_spotify_pass = QLineEdit()
-        self.text_spotify_pass.setPlaceholderText("Введите пароль от Spotify")
-        layout.addWidget(self.text_spotify_pass)
+        self.text_spotify_dc = QLineEdit()
+        self.text_spotify_dc.setPlaceholderText("Введите sp_dc от Spotify")
+        layout.addWidget(self.text_spotify_dc)
+        
+        self.text_spotify_key = QLineEdit()
+        self.text_spotify_key.setPlaceholderText("Введите sp_key от Spotify")
+        layout.addWidget(self.text_spotify_key)
         
         check_spotify_btn = QPushButton("Проверить доступ к Spotify.API")
         check_spotify_btn.clicked.connect(self.check_spotify_api)
         layout.addWidget(check_spotify_btn)
         
-        # info_spotify_api_btn = QPushButton("Как получить API ключ Spotify?")
-        # info_spotify_api_btn.clicked.connect(self.get_info_spotify_api)
-        # layout.addWidget(info_spotify_api_btn)
+        info_spotify_api_btn = QPushButton("Как получить cookie от Spotify?")
+        info_spotify_api_btn.clicked.connect(self.get_info_spotify_api)
+        layout.addWidget(info_spotify_api_btn)
         
         # Разделительная линия
-        line = QFrame()
-        line.setFrameShape(QFrame.Shape.HLine)
-        line.setFrameShadow(QFrame.Shadow.Sunken)
-        layout.addWidget(line)
+        line2 = QFrame()
+        line2.setFrameShape(QFrame.Shape.HLine)
+        line2.setFrameShadow(QFrame.Shadow.Sunken)
+        layout.addWidget(line2)
         
         # Конвертация
         self.start_conversion_btn = QPushButton("Начало конвертации")
@@ -97,7 +109,7 @@ class MainWindow(QMainWindow):
         
         self.check_config_file()
         
-    def checkYaApi(self):
+    def check_ya_api(self):
         with open("env.json", "r+") as f:
             data = json.load(f)
         
@@ -118,6 +130,11 @@ class MainWindow(QMainWindow):
             dlg.exec()
             return
         
+        tracks_json = self.ya_client.users_likes_tracks()
+        self.ya_songs = [[]]
+        for item in tracks_json.fetch_tracks():
+            self.ya_songs.append((item["artists"][0]["name"], item["title"]))
+        
         self.is_ya_api_working = True
         self.start_conversion_btn.setEnabled(self.is_api_good())
         self.ya_api_work_status_label.setText("Яндекс API готово")
@@ -135,63 +152,63 @@ class MainWindow(QMainWindow):
             data = json.load(f)
         
         data['spotify_username'] = self.text_spotify_login.text()
-        data['spotify_password'] = self.text_spotify_pass.text()
+        data['spotify_dc'] = self.text_spotify_dc.text()
+        data['spotify_key'] = self.text_spotify_key.text()
         
         with open("env.json", "w") as f:
             json.dump(data, f, indent=4)
             
-        self.is_spotify_api_working = True
-        self.start_conversion_btn.setEnabled(self.is_api_good())
-        self.spotify_api_work_status_label.setText("Spotify API готово")
-    
+        cfg = Config(
+            logger=NoopLogger()
+        )
+        
+        cookie = {
+            "identifier": self.text_spotify_login.text(),
+            "cookies": {
+                "sp_dc": self.text_spotify_dc.text(),
+                "sp_key": self.text_spotify_key.text()
+            }
+        }
+        
+        self.spotify_login = Login.from_cookies(dump=cookie, cfg=cfg)
+        
+        if self.spotify_login.logged_in:
+            self.is_spotify_api_working = True
+            self.start_conversion_btn.setEnabled(self.is_api_good())
+            self.spotify_api_work_status_label.setText("Spotify API готово")
+            
+            dlg = QDialog(self)
+            dlg.setWindowTitle("Проверка Spotify")
+            layout = QVBoxLayout()
+            message = QLabel("Авторизация успешна!")
+            layout.addWidget(message)
+            dlg.setLayout(layout)
+            dlg.exec()
+        else:
+            try:
+                self.spotify_login.login()
+                dlg = QDialog(self)
+                dlg.setWindowTitle("Проверка Spotify")
+                layout = QVBoxLayout()
+                message = QLabel("Авторизация успешна!")
+                layout.addWidget(message)
+                dlg.setLayout(layout)
+                dlg.exec()
+            except Exception as e:
+                print(f"SPOTIFY LOGIN ERROR: {e}")
+                dlg = QDialog(self)
+                dlg.setWindowTitle("Проверка Spotify")
+                layout = QVBoxLayout()
+                message = QLabel("Не удалось авторизоваться!")
+                layout.addWidget(message)
+                dlg.setLayout(layout)
+                dlg.exec()
+                return
+
+        self.spotify_tracks = self.get_spotify_liked_tracks(self.spotify_login)
+            
     def start_conversion(self):
-        self.is_getting_tracks = True
-        
-        dlg = QDialog(self)
-        dlg.setWindowTitle("Экспорт")
-        layout = QVBoxLayout()
-        dlg.setLayout(layout)
-        
-        log_text = QTextEdit()
-        log_text.setReadOnly(True)
-        layout.addWidget(log_text)
-        
-        progress_bar = QProgressBar()
-        layout.addWidget(progress_bar)
-        
-        stop_export_btn = QPushButton("Стоп")
-        stop_export_btn.clicked.connect(self.stop_getting)
-        layout.addWidget(stop_export_btn)
-        
-        dlg.show()
-        
-        tracks_json = self.ya_client.users_likes_tracks()
-        total_tracks = len(tracks_json)
-        self.ya_songs = [[]]
-        
-        for i, track in enumerate(tracks_json):
-            if (self.is_getting_tracks):
-                info = self.ya_client.tracks(track["id"])[0]
-                song_title = info.title
-                artist_name = info.artists[0].name
-                
-                message = f"{i+1}/{total_tracks}: {artist_name} - {song_title}"
-                
-                log_text.append(message)
-                
-                item = [song_title, artist_name]
-                self.ya_songs.append(item)
-            
-            progress = int((i + 1) / total_tracks * 100)
-            progress_bar.setValue(progress)
-            
-            QApplication.processEvents()
-            
-        stop_export_btn.setText("Экспорт в Spotify")
-        stop_export_btn.clicked.connect(self.try_export)
-        
-        log_text.append("Экспорт завершен!")
-        QApplication.processEvents()
+        pass
         
     def check_config_file(self):
         # Проверка файла на существовании и в случае чего его создание по шаблону
@@ -206,12 +223,12 @@ class MainWindow(QMainWindow):
                 data = json.load(f)
                 self.text_ya_api.setText(data["ya_secret"])
                 self.text_spotify_login.setText(data["spotify_username"])
-                self.text_spotify_pass.setText(data["spotify_password"])
+                self.text_spotify_dc.setText(data["spotify_dc"])
+                self.text_spotify_key.setText(data["spotify_key"])
                 
     def get_info_ya_api(self):
         webbrowser.open("https://github.com/bezdarnosti-yt/Yandex-To-Spotify/blob/master/YANDEX.md")
     
-    @DeprecationWarning
     def get_info_spotify_api(self):
         webbrowser.open("https://github.com/bezdarnosti-yt/Yandex-To-Spotify/blob/master/SPOTIFY.md")
         
@@ -224,6 +241,43 @@ class MainWindow(QMainWindow):
     def is_api_good(self) -> bool:
         return self.is_ya_api_working and self.is_spotify_api_working
     
+    def get_spotify_liked_tracks(self, login: Login) -> list[list]:
+        base = BaseClient(login.client)
+        all_tracks = [[]]
+        limit = 50
+        offset = 0
+        total = None
+
+        while True:
+            url = "https://api-partner.spotify.com/pathfinder/v1/query"
+            params = {
+                "operationName": "fetchLibraryTracks",
+                "variables": json.dumps({"limit": limit, "offset": offset}),
+                "extensions": json.dumps({
+                    "persistedQuery": {
+                        "version": 1,
+                        "sha256Hash": base.part_hash("fetchLibraryTracks"),
+                    }
+                }),
+            }
+
+            resp = login.client.post(url, params=params, authenticate=True)
+            data = resp.response["data"]["me"]["library"]["tracks"]
+            total = data["totalCount"]
+
+            for item in data["items"]:
+                track_data = item["track"]["data"]
+                title = track_data["name"]
+                artists = [a["profile"]["name"] for a in track_data["artists"]["items"]]
+                artist = ", ".join(artists)
+                all_tracks.append((artist, title))
+
+            offset += limit
+
+            if offset >= total:
+                break
+
+        return all_tracks
         
 def main():
     app = QApplication([])
