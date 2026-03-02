@@ -12,8 +12,8 @@ class MainWindow(QMainWindow):
     WIDTH = 320
     HEIGHT = 300
     
-    isYaApiWorking = False
-    isSpotifyApiWorking = False
+    is_ya_api_working = False
+    is_spotify_api_working = False
     
     file_path = Path("env.json")
     
@@ -33,30 +33,30 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout()
         
         # Яндекс - секция
-        self.textYaApi = QLineEdit()
-        self.textYaApi.setPlaceholderText("Введите токен от вашего аккаунта Яндекс.Музыка")
-        layout.addWidget(self.textYaApi)
+        self.text_ya_api = QLineEdit()
+        self.text_ya_api.setPlaceholderText("Введите токен от вашего аккаунта Яндекс.Музыка")
+        layout.addWidget(self.text_ya_api)
         
-        checkYaApiButton = QPushButton("Проверить доступ к Яндекс.API")
-        checkYaApiButton.clicked.connect(self.checkYaApi)
-        layout.addWidget(checkYaApiButton)
+        check_ya_api_btn = QPushButton("Проверить доступ к Яндекс.API")
+        check_ya_api_btn.clicked.connect(self.checkYaApi)
+        layout.addWidget(check_ya_api_btn)
         
-        infoYaApiButton = QPushButton("Как получить токен Яндекс?")
-        infoYaApiButton.clicked.connect(self.getInfoYaApi)
-        layout.addWidget(infoYaApiButton)
+        info_ya_api_btn = QPushButton("Как получить токен Яндекс?")
+        info_ya_api_btn.clicked.connect(self.get_info_ya_api)
+        layout.addWidget(info_ya_api_btn)
         
         # Спотифай - секция
-        self.textSpotifyApi = QLineEdit()
-        self.textSpotifyApi.setPlaceholderText("Введите api ключ от Spotify")
-        layout.addWidget(self.textSpotifyApi)
+        self.text_spotify_api = QLineEdit()
+        self.text_spotify_api.setPlaceholderText("Введите api ключ от Spotify")
+        layout.addWidget(self.text_spotify_api)
         
-        checkSpotifyApiButton = QPushButton("Проверить доступ к Spotify.API")
-        checkSpotifyApiButton.clicked.connect(self.checkSpotifyApi)
-        layout.addWidget(checkSpotifyApiButton)
+        check_spotify_btn = QPushButton("Проверить доступ к Spotify.API")
+        check_spotify_btn.clicked.connect(self.check_spotify_api)
+        layout.addWidget(check_spotify_btn)
         
-        infoSpotifyApiButton = QPushButton("Как получить API ключ Spotify?")
-        infoSpotifyApiButton.clicked.connect(self.getInfoSpotifyApi)
-        layout.addWidget(infoSpotifyApiButton)
+        info_spotify_api_btn = QPushButton("Как получить API ключ Spotify?")
+        info_spotify_api_btn.clicked.connect(self.get_info_spotify_api)
+        layout.addWidget(info_spotify_api_btn)
         
         # Разделительная линия
         line = QFrame()
@@ -65,10 +65,10 @@ class MainWindow(QMainWindow):
         layout.addWidget(line)
         
         # Конвертация
-        self.startConversionButton = QPushButton("Начало конвертации")
-        self.startConversionButton.clicked.connect(self.startConversion)
-        self.startConversionButton.setEnabled(self.isApiGood())
-        layout.addWidget(self.startConversionButton)
+        self.start_conversion_btn = QPushButton("Начало конвертации")
+        self.start_conversion_btn.clicked.connect(self.start_conversion)
+        self.start_conversion_btn.setEnabled(self.is_api_good())
+        layout.addWidget(self.start_conversion_btn)
         
         # Статус API
         api_layout = QHBoxLayout()
@@ -90,19 +90,19 @@ class MainWindow(QMainWindow):
         
         self.setCentralWidget(widget)
         
-        self.checkConfigFile()
+        self.check_config_file()
         
     def checkYaApi(self):
         with open("env.json", "r+") as f:
             data = json.load(f)
         
-        data['ya_secret'] = self.textYaApi.text()
+        data['ya_secret'] = self.text_ya_api.text()
         
         with open("env.json", "w") as f:
             json.dump(data, f, indent=4)
             
         try:
-            self.yaClient = Client(self.textYaApi.text()).init()
+            self.ya_client = Client(self.text_ya_api.text()).init()
         except UnauthorizedError:
             dlg = QDialog(self)
             dlg.setWindowTitle("Проверка Яндекс")
@@ -113,8 +113,8 @@ class MainWindow(QMainWindow):
             dlg.exec()
             return
         
-        self.isYaApiWorking = True
-        self.startConversionButton.setEnabled(self.isApiGood())
+        self.is_ya_api_working = True
+        self.start_conversion_btn.setEnabled(self.is_api_good())
         self.ya_api_work_status_label.setText("Яндекс API готово")
         
         dlg = QDialog(self)
@@ -125,21 +125,21 @@ class MainWindow(QMainWindow):
         dlg.setLayout(layout)
         dlg.exec()
         
-    def checkSpotifyApi(self):
+    def check_spotify_api(self):
         with open("env.json", "r+") as f:
             data = json.load(f)
         
-        data['spotify_secret'] = self.textSpotifyApi.text()
+        data['spotify_secret'] = self.text_spotify_api.text()
         
         with open("env.json", "w") as f:
             json.dump(data, f, indent=4)
             
-        self.isSpotifyApiWorking = True
-        self.startConversionButton.setEnabled(self.isApiGood())
+        self.is_spotify_api_working = True
+        self.start_conversion_btn.setEnabled(self.is_api_good())
         self.spotify_api_work_status_label.setText("Spotify API готово")
     
-    def startConversion(self):
-        self.isGettingTracks = True
+    def start_conversion(self):
+        self.is_getting_tracks = True
         
         dlg = QDialog(self)
         dlg.setWindowTitle("Экспорт")
@@ -153,27 +153,27 @@ class MainWindow(QMainWindow):
         progress_bar = QProgressBar()
         layout.addWidget(progress_bar)
         
-        stopExportButton = QPushButton("Стоп")
-        stopExportButton.clicked.connect(self.stopGetting)
-        layout.addWidget(stopExportButton)
+        stop_export_btn = QPushButton("Стоп")
+        stop_export_btn.clicked.connect(self.stop_getting)
+        layout.addWidget(stop_export_btn)
         
         dlg.show()
         
-        tracks_json = self.yaClient.users_likes_tracks()
+        tracks_json = self.ya_client.users_likes_tracks()
         total_tracks = len(tracks_json)
         self.songs = [[]]
         
         for i, track in enumerate(tracks_json):
-            if (self.isGettingTracks):
-                info = self.yaClient.tracks(track["id"])[0]
-                songTitle = info.title
-                artistName = info.artists[0].name
+            if (self.is_getting_tracks):
+                info = self.ya_client.tracks(track["id"])[0]
+                song_title = info.title
+                artist_name = info.artists[0].name
                 
-                message = f"{i+1}/{total_tracks}: {artistName} - {songTitle}"
+                message = f"{i+1}/{total_tracks}: {artist_name} - {song_title}"
                 
                 log_text.append(message)
                 
-                item = [songTitle, artistName]
+                item = [song_title, artist_name]
                 self.songs.append(item)
             
             progress = int((i + 1) / total_tracks * 100)
@@ -181,13 +181,13 @@ class MainWindow(QMainWindow):
             
             QApplication.processEvents()
             
-        stopExportButton.setText("Экспорт в Spotify")
-        stopExportButton.clicked.connect(self.tryExport)
+        stop_export_btn.setText("Экспорт в Spotify")
+        stop_export_btn.clicked.connect(self.try_export)
         
         log_text.append("Экспорт завершен!")
         QApplication.processEvents()
         
-    def checkConfigFile(self):
+    def check_config_file(self):
         # Проверка файла на существовании и в случае чего его создание по шаблону
         if not self.file_path.is_file():
             try:
@@ -198,23 +198,24 @@ class MainWindow(QMainWindow):
         else:
             with open("env.json", "r") as f:
                 data = json.load(f)
-                self.textYaApi.setText(data["ya_secret"])
-                self.textSpotifyApi.setText(data["spotify_secret"])
+                self.text_ya_api.setText(data["ya_secret"])
+                self.text_spotify_api.setText(data["spotify_secret"])
                 
-    def getInfoYaApi(self):
+    def get_info_ya_api(self):
         webbrowser.open("https://github.com/bezdarnosti-yt/Yandex-To-Spotify/blob/master/YANDEX.md")
     
-    def getInfoSpotifyApi(self):
+    def get_info_spotify_api(self):
         webbrowser.open("https://github.com/bezdarnosti-yt/Yandex-To-Spotify/blob/master/SPOTIFY.md")
         
-    def stopGetting(self):
-        self.isGettingTracks = False
+    def stop_getting(self):
+        self.is_getting_tracks = False
     
-    def tryExport(self):
+    def try_export(self):
         pass
     
-    def isApiGood(self) -> bool:
-        return self.isYaApiWorking and self.isSpotifyApiWorking
+    def is_api_good(self) -> bool:
+        return self.is_ya_api_working and self.is_spotify_api_working
+    
         
 def main():
     app = QApplication([])
