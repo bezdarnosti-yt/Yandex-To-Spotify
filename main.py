@@ -10,7 +10,7 @@ import webbrowser
 
 class MainWindow(QMainWindow):
     WIDTH = 320
-    HEIGHT = 300
+    HEIGHT = 260
     
     is_ya_api_working = False
     is_spotify_api_working = False
@@ -19,7 +19,8 @@ class MainWindow(QMainWindow):
     
     env = {
         "ya_secret" : "",
-        "spotify_secret" : ""
+        "spotify_username" : "",
+        "spotify_password" : ""
     }
     empty_data = {}
     
@@ -46,17 +47,21 @@ class MainWindow(QMainWindow):
         layout.addWidget(info_ya_api_btn)
         
         # Спотифай - секция
-        self.text_spotify_api = QLineEdit()
-        self.text_spotify_api.setPlaceholderText("Введите api ключ от Spotify")
-        layout.addWidget(self.text_spotify_api)
+        self.text_spotify_login = QLineEdit()
+        self.text_spotify_login.setPlaceholderText("Введите логин от Spotify")
+        layout.addWidget(self.text_spotify_login)
+        
+        self.text_spotify_pass = QLineEdit()
+        self.text_spotify_pass.setPlaceholderText("Введите пароль от Spotify")
+        layout.addWidget(self.text_spotify_pass)
         
         check_spotify_btn = QPushButton("Проверить доступ к Spotify.API")
         check_spotify_btn.clicked.connect(self.check_spotify_api)
         layout.addWidget(check_spotify_btn)
         
-        info_spotify_api_btn = QPushButton("Как получить API ключ Spotify?")
-        info_spotify_api_btn.clicked.connect(self.get_info_spotify_api)
-        layout.addWidget(info_spotify_api_btn)
+        # info_spotify_api_btn = QPushButton("Как получить API ключ Spotify?")
+        # info_spotify_api_btn.clicked.connect(self.get_info_spotify_api)
+        # layout.addWidget(info_spotify_api_btn)
         
         # Разделительная линия
         line = QFrame()
@@ -129,7 +134,8 @@ class MainWindow(QMainWindow):
         with open("env.json", "r+") as f:
             data = json.load(f)
         
-        data['spotify_secret'] = self.text_spotify_api.text()
+        data['spotify_username'] = self.text_spotify_login.text()
+        data['spotify_password'] = self.text_spotify_pass.text()
         
         with open("env.json", "w") as f:
             json.dump(data, f, indent=4)
@@ -161,7 +167,7 @@ class MainWindow(QMainWindow):
         
         tracks_json = self.ya_client.users_likes_tracks()
         total_tracks = len(tracks_json)
-        self.songs = [[]]
+        self.ya_songs = [[]]
         
         for i, track in enumerate(tracks_json):
             if (self.is_getting_tracks):
@@ -174,7 +180,7 @@ class MainWindow(QMainWindow):
                 log_text.append(message)
                 
                 item = [song_title, artist_name]
-                self.songs.append(item)
+                self.ya_songs.append(item)
             
             progress = int((i + 1) / total_tracks * 100)
             progress_bar.setValue(progress)
@@ -199,11 +205,13 @@ class MainWindow(QMainWindow):
             with open("env.json", "r") as f:
                 data = json.load(f)
                 self.text_ya_api.setText(data["ya_secret"])
-                self.text_spotify_api.setText(data["spotify_secret"])
+                self.text_spotify_login.setText(data["spotify_username"])
+                self.text_spotify_pass.setText(data["spotify_password"])
                 
     def get_info_ya_api(self):
         webbrowser.open("https://github.com/bezdarnosti-yt/Yandex-To-Spotify/blob/master/YANDEX.md")
     
+    @DeprecationWarning
     def get_info_spotify_api(self):
         webbrowser.open("https://github.com/bezdarnosti-yt/Yandex-To-Spotify/blob/master/SPOTIFY.md")
         
