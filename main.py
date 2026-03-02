@@ -1,5 +1,5 @@
 from PyQt6.QtCore import QSize
-from PyQt6.QtWidgets import QMainWindow, QPushButton, QLineEdit, QVBoxLayout, QWidget, QApplication, QFrame, QDialog, QLabel
+from PyQt6.QtWidgets import QMainWindow, QPushButton, QLineEdit, QVBoxLayout, QWidget, QApplication, QFrame, QDialog, QLabel, QTextEdit, QProgressBar
 from pathlib import Path
 from yandex_music import Client
 from yandex_music.exceptions import UnauthorizedError
@@ -86,7 +86,7 @@ class MainWindow(QMainWindow):
             json.dump(data, f, indent=4)
             
         try:
-            client = Client(self.textYaApi.text()).init()
+            self.yaClient = Client(self.textYaApi.text()).init()
         except UnauthorizedError:
             dlg = QDialog(self)
             dlg.setWindowTitle("Проверка Яндекс")
@@ -105,7 +105,6 @@ class MainWindow(QMainWindow):
         dlg.setLayout(layout)
         dlg.exec()
         
-    
     def checkSpotifyApi(self):
         with open("env.json", "r+") as f:
             data = json.load(f)
@@ -116,8 +115,54 @@ class MainWindow(QMainWindow):
             json.dump(data, f, indent=4)
     
     def startConversion(self):
-        pass
-    
+        self.isGettingTracks = True
+        
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Экспорт")
+        layout = QVBoxLayout()
+        dlg.setLayout(layout)
+        
+        log_text = QTextEdit()
+        log_text.setReadOnly(True)
+        layout.addWidget(log_text)
+        
+        progress_bar = QProgressBar()
+        layout.addWidget(progress_bar)
+        
+        stopExportButton = QPushButton("Стоп")
+        stopExportButton.clicked.connect(self.stopGetting)
+        layout.addWidget(stopExportButton)
+        
+        dlg.show()
+        
+        tracks_json = self.yaClient.users_likes_tracks()
+        total_tracks = len(tracks_json)
+        self.songs = [[]]
+        
+        for i, track in enumerate(tracks_json):
+            if (self.isGettingTracks):
+                info = self.yaClient.tracks(track["id"])[0]
+                songTitle = info.title
+                artistName = info.artists[0].name
+                
+                message = f"{i+1}/{total_tracks}: {artistName} - {songTitle}"
+                
+                log_text.append(message)
+                
+                item = [songTitle, artistName]
+                self.songs.append(item)
+            
+            progress = int((i + 1) / total_tracks * 100)
+            progress_bar.setValue(progress)
+            
+            QApplication.processEvents()
+            
+        stopExportButton.setText("Экспорт в Spotify")
+        stopExportButton.clicked.connect(self.tryExport)
+        
+        log_text.append("Экспорт завершен!")
+        QApplication.processEvents()
+        
     def checkConfigFile(self):
         # Проверка файла на существовании и в случае чего его создание по шаблону
         if not self.file_path.is_file():
@@ -138,6 +183,11 @@ class MainWindow(QMainWindow):
     def getInfoSpotifyApi(self):
         webbrowser.open("https://github.com/bezdarnosti-yt/Yandex-To-Spotify/blob/master/SPOTIFY.md")
         
+    def stopGetting(self):
+        self.isGettingTracks = False
+    
+    def tryExport(self):
+        pass
         
 def main():
     app = QApplication([])
