@@ -214,7 +214,7 @@ class MainWindow(QMainWindow):
                 return
             
     def start_conversion(self):
-        tracks = self.delete_similar_tracks_from_lists(self.ya_tracks, self.spotify_tracks)
+        self.tracks = self.delete_similar_tracks_from_lists(self.ya_tracks, self.spotify_tracks)
         
         self.is_getting_tracks = True
         
@@ -236,9 +236,9 @@ class MainWindow(QMainWindow):
         
         dlg.show()
         
-        total_tracks = len(tracks)
+        total_tracks = len(self.tracks)
         
-        for i, track in enumerate(tracks):
+        for i, track in enumerate(self.tracks):
             if (self.is_getting_tracks):
                 artist, song = track
                 log_text.append(f"{i + 1}. {artist} - {song}")
@@ -280,7 +280,73 @@ class MainWindow(QMainWindow):
         self.is_getting_tracks = False
     
     def try_export(self):
-        pass
+        self.is_exporting = True
+        
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Экспорт")
+        layout = QVBoxLayout()
+        dlg.setLayout(layout)
+        
+        log_text = QTextEdit()
+        log_text.setReadOnly(True)
+        layout.addWidget(log_text)
+        
+        progress_bar = QProgressBar()
+        layout.addWidget(progress_bar)
+        
+        stop_running_btn = QPushButton("Стоп")
+        stop_running_btn.clicked.connect(self.stop_run)
+        layout.addWidget(stop_running_btn)
+        
+        dlg.show()
+        
+        total_tracks = len(self.tracks)
+        
+        playlist = PrivatePlaylist(self.spotify_login, "spotify:collection:tracks")
+        song = Song(playlist=playlist)
+        
+        for i, track in enumerate(self.tracks):
+            if self.is_exporting:
+                artist, name = track
+                
+                query = f"{artist} {name}"
+                results = song.query_songs(query, limit=1)
+                
+                items = results["data"]["searchV2"]["tracksV2"]["items"]
+                if not items:
+                    is_sucessful = False
+                else:
+                    is_sucessful = True
+                
+                if is_sucessful:
+                    res = items[0]["item"]["data"]
+                    found_title = res["name"]
+                    found_artist = res["artists"]["items"][0]["profile"]["name"]
+                    song_id = items[0]["item"]["data"]["uri"].split(":")[-1]
+                    print(song_id)
+            
+                    if (name in found_title or artist in found_artist):
+                        try:
+                            song.like_song(song_id)
+                        except Exception as e:
+                            message = f"{i + 1}. {artist} - {name} [ОШИБКА] {e}"
+                            log_text.append(f'<span style="color: red;">{message}</span>')
+                        message = f"{i + 1}. {artist} - {name} [УДАЧНО] ({found_artist} - {found_title}))"
+                        log_text.append(f'<span style="color: green;">{message}</span>')
+                    else:
+                        message = f"{i + 1}. {artist} - {name} [НЕ НАЙДЕНО] ({found_artist} - {found_title})"
+                        log_text.append(f'<span style="color: red;">{message}</span>')
+                else:
+                    message = f"{i + 1}. {artist} - {name} [ОШИБКА]"
+                    log_text.append(f'<span style="color: red;">{message}</span>')
+                
+                progress = int((i + 1) / total_tracks * 100)
+                progress_bar.setValue(progress)
+                
+                QApplication.processEvents()
+        
+        log_text.append("Экспорт завершен!")
+        QApplication.processEvents()
     
     def is_api_good(self) -> bool:
         return self.is_ya_api_working and self.is_spotify_api_working
@@ -342,6 +408,32 @@ class MainWindow(QMainWindow):
                 unique_ya_tracks.append(track)
                 
         return unique_ya_tracks
+    
+    def stop_run(self):
+            self.is_exporting = False
+    
+    def like_song_fixed(self, song_id: str) -> bool:
+        base = BaseClient(self.spotify_login.client)
+        
+        url = "https://api-partner.spotify.com/pathfinder/v1/query"
+        payload = {
+            "variables": {"libraryItemUris": [f"spotify:track:{song_id}"]},
+            "operationName": "addToLibrary",
+            "extensions": {
+                "persistedQuery": {
+                    "version": 1,
+                    "sha256Hash": base.part_hash("addToLibrary"),
+                }
+            },
+        }
+
+        resp = self.spotify_login.client.post(url, json=payload, authenticate=True)
+        
+        if resp.fail:
+            print(f"Ошибка лайка: {resp.error.string}")
+            return False
+        
+        return True
     
 def main():
     app = QApplication([])
