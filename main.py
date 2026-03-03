@@ -412,29 +412,6 @@ class MainWindow(QMainWindow):
     def stop_run(self):
             self.is_exporting = False
     
-    def like_song_fixed(self, song_id: str) -> bool:
-        base = BaseClient(self.spotify_login.client)
-        
-        url = "https://api-partner.spotify.com/pathfinder/v1/query"
-        payload = {
-            "variables": {"libraryItemUris": [f"spotify:track:{song_id}"]},
-            "operationName": "addToLibrary",
-            "extensions": {
-                "persistedQuery": {
-                    "version": 1,
-                    "sha256Hash": base.part_hash("addToLibrary"),
-                }
-            },
-        }
-
-        resp = self.spotify_login.client.post(url, json=payload, authenticate=True)
-        
-        if resp.fail:
-            print(f"Ошибка лайка: {resp.error.string}")
-            return False
-        
-        return True
-    
 def main():
     app = QApplication([])
     window = MainWindow()
