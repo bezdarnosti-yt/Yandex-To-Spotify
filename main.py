@@ -131,9 +131,10 @@ class MainWindow(QMainWindow):
             return
         
         tracks_json = self.ya_client.users_likes_tracks()
-        self.ya_songs = [[]]
+        self.ya_tracks = []
         for item in tracks_json.fetch_tracks():
-            self.ya_songs.append((item["artists"][0]["name"], item["title"]))
+            self.ya_tracks.append((item["artists"][0]["name"], item["title"]))
+        self.ya_tracks.sort(key=lambda row : (row[0], row[1]))
         
         self.is_ya_api_working = True
         self.start_conversion_btn.setEnabled(self.is_api_good())
@@ -206,6 +207,7 @@ class MainWindow(QMainWindow):
                 return
 
         self.spotify_tracks = self.get_spotify_liked_tracks(self.spotify_login)
+        self.spotify_tracks.sort(key=lambda row: (row[0], row[1]))
             
     def start_conversion(self):
         pass
@@ -243,7 +245,7 @@ class MainWindow(QMainWindow):
     
     def get_spotify_liked_tracks(self, login: Login) -> list[list]:
         base = BaseClient(login.client)
-        all_tracks = [[]]
+        all_tracks = []
         limit = 50
         offset = 0
         total = None
