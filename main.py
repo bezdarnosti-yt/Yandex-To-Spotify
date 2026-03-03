@@ -40,9 +40,9 @@ class MainWindow(QMainWindow):
         self.text_ya_api.setPlaceholderText("Введите токен от вашего аккаунта Яндекс.Музыка")
         layout.addWidget(self.text_ya_api)
         
-        check_ya_api_btn = QPushButton("Проверить доступ к Яндекс.API")
-        check_ya_api_btn.clicked.connect(self.check_ya_api)
-        layout.addWidget(check_ya_api_btn)
+        self.check_ya_api_btn = QPushButton("Проверить доступ к Яндекс.API")
+        self.check_ya_api_btn.clicked.connect(self.check_ya_api)
+        layout.addWidget(self.check_ya_api_btn)
         
         info_ya_api_btn = QPushButton("Как получить токен Яндекс?")
         info_ya_api_btn.clicked.connect(self.get_info_ya_api)
@@ -67,9 +67,9 @@ class MainWindow(QMainWindow):
         self.text_spotify_key.setPlaceholderText("Введите sp_key от Spotify")
         layout.addWidget(self.text_spotify_key)
         
-        check_spotify_btn = QPushButton("Проверить доступ к Spotify.API")
-        check_spotify_btn.clicked.connect(self.check_spotify_api)
-        layout.addWidget(check_spotify_btn)
+        self.check_spotify_btn = QPushButton("Проверить доступ к Spotify.API")
+        self.check_spotify_btn.clicked.connect(self.check_spotify_api)
+        layout.addWidget(self.check_spotify_btn)
         
         info_spotify_api_btn = QPushButton("Как получить cookie от Spotify?")
         info_spotify_api_btn.clicked.connect(self.get_info_spotify_api)
@@ -130,15 +130,13 @@ class MainWindow(QMainWindow):
             dlg.exec()
             return
         
-        tracks_json = self.ya_client.users_likes_tracks()
-        self.ya_tracks = []
-        for item in tracks_json.fetch_tracks():
-            self.ya_tracks.append((item["artists"][0]["name"], item["title"]))
-        self.ya_tracks.sort(key=lambda row : (row[0], row[1]))
+        self.ya_tracks = self.get_ya_liked_tracks(self.ya_client)
         
         self.is_ya_api_working = True
         self.start_conversion_btn.setEnabled(self.is_api_good())
         self.ya_api_work_status_label.setText("Яндекс API готово")
+        
+        self.check_ya_api_btn.setEnabled(not self.is_ya_api_working)
         
         dlg = QDialog(self)
         dlg.setWindowTitle("Проверка Яндекс")
@@ -178,6 +176,11 @@ class MainWindow(QMainWindow):
             self.start_conversion_btn.setEnabled(self.is_api_good())
             self.spotify_api_work_status_label.setText("Spotify API готово")
             
+            self.check_spotify_btn.setEnabled(not self.is_spotify_api_working)
+            
+            self.spotify_tracks = self.get_spotify_liked_tracks(self.spotify_login)
+            self.spotify_tracks.sort(key=lambda row: (row[0], row[1]))
+            
             dlg = QDialog(self)
             dlg.setWindowTitle("Проверка Spotify")
             layout = QVBoxLayout()
@@ -188,6 +191,10 @@ class MainWindow(QMainWindow):
         else:
             try:
                 self.spotify_login.login()
+                
+                self.spotify_tracks = self.get_spotify_liked_tracks(self.spotify_login)
+                self.spotify_tracks.sort(key=lambda row: (row[0], row[1]))
+                
                 dlg = QDialog(self)
                 dlg.setWindowTitle("Проверка Spotify")
                 layout = QVBoxLayout()
@@ -205,12 +212,47 @@ class MainWindow(QMainWindow):
                 dlg.setLayout(layout)
                 dlg.exec()
                 return
-
-        self.spotify_tracks = self.get_spotify_liked_tracks(self.spotify_login)
-        self.spotify_tracks.sort(key=lambda row: (row[0], row[1]))
             
     def start_conversion(self):
-        pass
+        tracks = self.delete_similar_tracks_from_lists(self.ya_tracks, self.spotify_tracks)
+        
+        self.is_getting_tracks = True
+        
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Экспорт")
+        layout = QVBoxLayout()
+        dlg.setLayout(layout)
+        
+        log_text = QTextEdit()
+        log_text.setReadOnly(True)
+        layout.addWidget(log_text)
+        
+        progress_bar = QProgressBar()
+        layout.addWidget(progress_bar)
+        
+        stop_export_btn = QPushButton("Стоп")
+        stop_export_btn.clicked.connect(self.stop_getting)
+        layout.addWidget(stop_export_btn)
+        
+        dlg.show()
+        
+        total_tracks = len(tracks)
+        
+        for i, track in enumerate(tracks):
+            if (self.is_getting_tracks):
+                artist, song = track
+                log_text.append(f"{i + 1}. {artist} - {song}")
+            
+            progress = int((i + 1) / total_tracks * 100)
+            progress_bar.setValue(progress)
+            
+            QApplication.processEvents()
+            
+        stop_export_btn.setText("Экспорт в Spotify")
+        stop_export_btn.clicked.connect(self.try_export)
+        
+        log_text.append("Экспорт завершен!")
+        QApplication.processEvents()
         
     def check_config_file(self):
         # Проверка файла на существовании и в случае чего его создание по шаблону
@@ -281,6 +323,26 @@ class MainWindow(QMainWindow):
 
         return all_tracks
         
+    def get_ya_liked_tracks(self, ya_client: Client) -> list[list]:
+        tracks_json = ya_client.users_likes_tracks()
+        ya_tracks = []
+        for item in tracks_json.fetch_tracks():
+            ya_tracks.append((item["artists"][0]["name"], item["title"]))
+        ya_tracks.sort(key=lambda row : (row[0], row[1]))
+        return ya_tracks
+    
+    def delete_similar_tracks_from_lists(self, ya_tracks: list[list],  spotify_tracks: list[list]) -> list[list]:
+        spotify_set = set(tuple(track) for track in spotify_tracks)
+        
+        unique_ya_tracks = []
+        
+        for track in ya_tracks:
+            track_tuple = tuple(track)
+            if track_tuple not in spotify_set:
+                unique_ya_tracks.append(track)
+                
+        return unique_ya_tracks
+    
 def main():
     app = QApplication([])
     window = MainWindow()
