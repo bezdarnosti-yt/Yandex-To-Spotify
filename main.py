@@ -110,6 +110,16 @@ class MainWindow(QMainWindow):
         self.check_config_file()
         
     def check_ya_api(self):
+        if self.text_ya_api.text() == "":
+            dlg = QDialog(self)
+            dlg.setWindowTitle("Проверка Яндекс")
+            layout = QVBoxLayout()
+            message = QLabel("Введите данные!")
+            layout.addWidget(message)
+            dlg.setLayout(layout)
+            dlg.exec()
+            return
+        
         with open("env.json", "r+") as f:
             data = json.load(f)
         
@@ -147,6 +157,16 @@ class MainWindow(QMainWindow):
         dlg.exec()
         
     def check_spotify_api(self):
+        if self.text_spotify_dc.text() == "" or self.text_spotify_key.text() == "" or self.text_spotify_login.text() == "":
+            dlg = QDialog(self)
+            dlg.setWindowTitle("Проверка Spotify")
+            layout = QVBoxLayout()
+            message = QLabel("Введите все данные!")
+            layout.addWidget(message)
+            dlg.setLayout(layout)
+            dlg.exec()
+            return
+        
         with open("env.json", "r+") as f:
             data = json.load(f)
         
