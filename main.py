@@ -323,16 +323,15 @@ class MainWindow(QMainWindow):
                     found_title = res["name"]
                     found_artist = res["artists"]["items"][0]["profile"]["name"]
                     song_id = items[0]["item"]["data"]["uri"].split(":")[-1]
-                    print(song_id)
             
                     if (name in found_title or artist in found_artist):
                         try:
                             song.like_song(song_id)
+                            message = f"{i + 1}. {artist} - {name} [УДАЧНО] ({found_artist} - {found_title}))"
+                            log_text.append(f'<span style="color: green;">{message}</span>')
                         except Exception as e:
                             message = f"{i + 1}. {artist} - {name} [ОШИБКА] {e}"
                             log_text.append(f'<span style="color: red;">{message}</span>')
-                        message = f"{i + 1}. {artist} - {name} [УДАЧНО] ({found_artist} - {found_title}))"
-                        log_text.append(f'<span style="color: green;">{message}</span>')
                     else:
                         message = f"{i + 1}. {artist} - {name} [НЕ НАЙДЕНО] ({found_artist} - {found_title})"
                         log_text.append(f'<span style="color: red;">{message}</span>')
