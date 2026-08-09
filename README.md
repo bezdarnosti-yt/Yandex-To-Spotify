@@ -73,13 +73,7 @@ python main.py
 ```bash
 pip install pyinstaller
 
-pyinstaller --onefile --windowed --name "YaConversion" \
-  --collect-all PyQt6 \
-  --collect-all yandex_music \
-  --collect-all spotapi \
-  --collect-all tls_client \
-  --add-binary "путь\до\tls_client\dependencies\tls-client-64.dll;tls_client/dependencies/" \
-  main.py
+pyinstaller --onefile --windowed --name "YaConversion" --collect-all PyQt6 --collect-all yandex_music --collect-all spotapi --collect-all tls_client --add-binary "tls-client-windows-64.dll;tls_client/dependencies/" main.py
 ```
 
 Готовый файл появится в папке `dist/`.
